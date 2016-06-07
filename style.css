@@ -179,21 +179,3 @@
 		margin-top:0px;
 		margin-left: 35px;
 	}
-	.center {
-		margin: 0 auto;
-		width: 50%;
-		/*display: block;*/
-		/*width: 1400px;*/
-	}
-
-	.center-wide {
-		margin: 0 auto;
-		width: 1400px;
-	}
-	.graph{
-		border: red solid 2px;
-	}
-
-	.bd {
-		border: red solid 4px;
-	}
