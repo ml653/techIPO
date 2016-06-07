@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project 2</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
+    <style>
+        body {
+            font-family: "Raleway";
+            font-size: 18px ;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        html {
+            height: 100%;
+        }
+        .bd {
+            border: red solid 2px;
+        }
+        .line {
+            stroke: skyblue;
+            stroke-width: 1.5px;
+            fill: none;
+        }
+        .flex {
+            display: flex;
+            display: flex;
+            flex-flow: row;
+            flex-wrap: wrap;
+        }
+        .flex-1 {
+            flex: 0 0 100%;
+        }
+        .flexCenter {
+            align-items: center;
+            justify-content: center;
+        }
+        .flex-1-3 {
+            flex: 0 0 33%;
+            margin-top: 20px;
+        }
+        .info {
+            display: block;
+            height: 600px;
+            width: 800px;
+            background-color: rgba(255, 255, 255, 1);
+            display: inline-block;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 3px 3px 3px #000000;
+        }
+        .background {
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }
+    </style>
+</head>
+<body>
+<div class="background flex flexCenter">
+    <div class="info flex flexCenter">
+        <div class="svg1 flex flexCenter"></div>
+        <div class="textHolder flex"></div>
+    </div>
+</div>
+
+
+<script>
+    //Not our merge or mergeSort; cite (http://khan4019.github.io/front-end-Interview-Questions/sort.html);
+    function merge(left, right){
+        var result = [],
+                lLen = left.length,
+                rLen = right.length,
+                l = 0,
+                r = 0;
+        while(l < lLen && r < rLen){
+            if(left[l].date < right[r].date){
+                result.push(left[l++]);
+            }
+            else{
+                result.push(right[r++]);
+            }
+        }
+        return result.concat(left.slice(l)).concat(right.slice(r));
+    }
+
+    function mergeSort(arr){
+        var len = arr.length;
+        if(len <2)
+            return arr;
+        var mid = Math.floor(len/2),
+                left = arr.slice(0,mid),
+                right =arr.slice(mid);
+        return merge(mergeSort(left),mergeSort(right));
+    }
+    $(document).ready(function(){
+        d3.csv('stock_data.csv', function(error, data){
+            var obj = data[80];
+            print(obj);
+        });
+    });
+
+    //Primary print function to edit information; pass in stockData object
+    function print(obj){
+        var dateArray = [];
+        for(var x in obj){
+            if(!isNaN(Date.parse(x))){
+                dateArray.push({date: new Date(Date.parse(x)), value: obj[x]});
+            }
+        }
+        var sortedArray = mergeSort(dateArray);
+        printGraph(sortedArray);
+
+        var IPODate = obj['Offer Date'];
+        var name = obj.Name;
+        var offerMarketValue = obj['Offer Market Value'];
+        var returnValue = obj.Return;
+        var currentMarketValue = obj['04/12/2016'];
+        var sector = obj.Sector;
+        var country = obj.Country;
+        var companyWebsite = obj['Company Website'];
+        var cagr = obj.CAGR;
+        var offerPrice = obj['Offer Price'];
+
+        $('.svg1').prepend('<div class="flex flex-1 flexCenter"><h1>'+name+'</h1></div>');
+        $('.textHolder').append('<div class="flex flex-1-3"><b>Offer Date: </b>'+IPODate+'</div>');
+        $('.textHolder').append('<div class="flex flex-1-3"><b>Offer Market Value: </b>'+offerMarketValue+'</div>');
+        $('.textHolder').append('<div class="flex flex-1-3">Current Market Value (04/12/16): $'+currentMarketValue+'</div>');
+
+        $('.textHolder').append('<div class="flex flex-1-3"><b>Return: </b>'+returnValue+'</div>');
+        $('.textHolder').append('<div class="flex flex-1-3"><b>CAGR: </b>'+cagr+'</div>');
+        $('.textHolder').append('<div class="flex flex-1-3"><b>Offer Price: </b> '+offerPrice+'</div>');
+
+        $('.textHolder').append('<div class="flex flex-1-3"><b>Country: </b>'+country+'</div>');
+        $('.textHolder').append('<div class="flex flex-1-3"><b>Sector: </b>'+sector+'</div>');
+        $('.textHolder').append('<div class="flex flex-1-3"><b>Company Website: </b><br><a href='+companyWebsite+'>'+companyWebsite+'</a></div>');
+    }
+
+    //Prints the graph to the SVG; appends all axis, labels, etc.
+    function printGraph(array){
+        var height = 350;
+        var width = 800;
+        var padding = 100;
+        var dataArray = array.map(function(cell){
+            return {x: cell['date'], y:cell['value']}
+        }).filter(function(cell){
+            if(isNaN(cell.x) || isNaN(cell.y) || cell.x=="" ||  cell.y==""){
+                return false;
+            } else return true;
+        }).filter(function(cell){
+            if(cell.y == 0) return false;
+            else return true;
+        }).map(function(cell){
+            return {x: Number(cell.x), y: cell.y};
+        });
+
+        allData = dataArray;
+        var sortedArray = mergeSort(dataArray);
+
+        $('.svg1').empty();
+        var svg1 = d3.select('.svg1').append("svg").attr("height", height).attr("width", width);
+
+        //Generate scales
+        var xMin = Math.min.apply(null, dataArray.map(function(cell){return cell.x}));
+        var xMax = Math.max.apply(null, dataArray.map(function(cell){return cell.x}));
+        var yMin = Math.min.apply(null, dataArray.map(function(cell){return cell.y}));
+        var yMax = Math.max.apply(null, dataArray.map(function(cell){return cell.y}));
+        var xScale = d3.time.scale().domain([xMin, xMax]).range([padding, width-padding]);
+        var yScale = d3.scale.linear().domain([yMin, yMax]).range([height-padding, padding]);
+
+        //Append scales
+        var xAxes = d3.svg.axis()
+                .scale(xScale)
+                .ticks(10)
+                .orient("bottom");
+
+        var yAxes = d3.svg.axis()
+                .scale(yScale)
+                .ticks(10)
+                .orient("left");
+
+        svg1.append("g")
+                .attr('class', 'axis')
+                .attr("transform", "translate("+(0)+", "+(height-padding)+")")
+                .call(xAxes);
+
+        svg1.append("g")
+                .attr('class', 'axis')
+                .attr("transform", "translate("+(padding-15)+", "+(0)+")")
+                .call(yAxes);
+
+        var path = d3.svg.line()
+                .x(function (d) { return xScale(d.x); })
+                .y(function (d) { return yScale(d.y); });
+
+        svg1.append("path").attr("d", path(sortedArray)).attr("class", "line");
+
+        svg1.append('g').append('text')
+                .text("Millions ($)")
+                .attr("x", height/2)
+                .attr("y", 30)
+                .attr("fill", "black")
+                .attr("text-anchor", "middle")
+                .attr('transform', 'translate(0,350),rotate(-90)');
+    }
+
+
+
+
+</script>
+
+</body>
+</html>

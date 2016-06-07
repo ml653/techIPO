@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <style>
+        .wrapper{
+            margin-top: 20px;
+        }
+        #filter{
+            width: 500px;
+        }
+        
+        label{display: block;}
+        input{float:right;}
+       
+
+        #colorFilter{
+            width: 200px;
+        }
+        #filter, #colorFilter{
+            display: inline-block;
+        }
+        #colorFilter input{
+            float: none;
+        }
+        #colorFilter label{
+            display: inline-block;
+            margin-left: 15px;
+        }
+        #colorFilterTitle{
+            margin-left: 15px;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="filter" class="wrapper"></div>
+<div id="colorFilter" class="wrapper"><p id="colorFilterTitle">Color By:</p></div>
+<script>
+    var stockData;
+    var industries =[]; 
+    var colorOptions=["Industry","Return"];
+    var maxValuation;
+    var minValuation;
+
+    d3.csv('stock_data.csv', function(error,data){
+        //Sets stock
+        stockData = data;
+        maxValuation = d3.max(stockData, function(d) { return d["Offer Market Value"]; });
+        minValuation = d3.min(stockData, function(d) { return d["Offer Market Value"]; });
+        industries.push("All");
+
+        stockData.forEach(function(company){
+
+            if (industries.indexOf(company.Industry) == -1){
+                industries.push(company.Industry);
+            }
+        
+        });
+
+        var industryFilterForm = d3.select("#filter").append("form");
+                labels = industryFilterForm.selectAll("label")
+                .data(industries)
+                .enter()
+                .append("label")
+                    .text(function(d) {return d;})
+                .insert("input")
+                .attr("id", "filterType")
+                .attr("checked", true)
+                .attr("id", function(d){return d;})
+                .attr({
+                        type: "checkbox",
+                        class: "checkbox",
+                        name: "industryFilter",
+                        value: function(d) {return d;}
+                });
+
+        var colorFilterForm = d3.select("#colorFilter").append("form");
+            labels = colorFilterForm.selectAll("label")
+            .data(colorOptions)
+            .enter()
+            .append("label")
+            .text(function(d) {return d;})
+            .insert("input")
+            .attr({
+                type: "radio",
+                class: "shape",
+                name: "mode",
+                value: function(d) {return d;}
+            });
+    });
+
+    
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,199 @@
+/*******GENERAL FORMATTING*******/
+	body {
+		font-family: "Raleway";
+		font-size: 18px ;
+		height: 100%;
+		padding: 0;
+		margin: 0;
+	}
+	html {
+		height: 100%;
+	}
+	svg {
+	    white-space:pre-wrap;
+	}
+	div {
+	      white-space:pre-wrap;
+	}
+	text {
+	    font-family: sans-serif;
+	    pointer-events: none;
+	}
+	.clickHereText {
+		pointer-events: none;
+	}
+	.wrapper, .description_text, h2, #header_title, #header_authors{
+		margin-left: 35px;
+	}
+	.description_text{
+		width: 900px;
+		margin-top: 0;
+	}
+	h2{
+		margin-bottom:0;
+	}
+
+/*******HEADER FORMATTING*******/
+	.header{
+		background-color: skyblue;
+		height: 150px;
+		margin-bottom: 25px;
+	}
+	#header_title, #header_authors{
+		margin-top: 0;
+		margin-bottom:0;}
+	#header_title{
+		font-size: 25px;
+		font-weight: bolder;
+	}
+	#header_authors{
+		margin-bottom: 25px;
+	}
+
+/*******FILTER FORMATTING*******/
+	#filter{
+		width: 450px;
+		font-size: 15px;
+	}
+	#colorFilter{
+	    width: 200px;
+	    font-size: 15px;
+	}
+	label{display: block;}
+	input{float:right;}
+
+	#filter, #colorFilter{
+	    display: inline-block;
+	    border-bottom: thin black solid;
+	    margin-bottom: 0;
+	}
+	#colorFilter input{
+	    float: none;
+	}
+	#colorFilter label{
+	    display: inline-block;
+	    margin-left: 15px;
+	}
+	#colorFilter p{
+	    margin-left: 15px;
+	}
+	.filterTitle{
+	    margin-bottom: 0;
+	    text-decoration: underline;
+	}
+
+	/*Color Coordinating Industry Filter*/
+	#TechnologyHardwareStorageandPeripheralsID{
+		color: #F49AC2;
+	}
+	#SoftwareID{
+		color: #03C03C;
+	}
+	#InternetSoftwareandServicesID{
+		color: #779ECB;
+	}
+	#ElectronicEquipmentInstrumentsandComponentsID{
+		color: #FFDF00;
+	}
+	#CommunicationsEquipmentID{
+		color: #CFCFC4;
+	}
+	#ITServicesID{
+		color: #FF6961;
+	}
+	#InternetandCatalogRetailID{
+		color: #FFB347;
+	}
+	#SemiconductorsandSemiconductorEquipmentID{
+		color: #CB99C9;
+	}
+	#AutomobilesID{
+		color: #1FCECB;
+	}
+
+/*******VISUALIZATION FORMATTING*******/
+	#svg{
+			margin-top:0;
+		}
+	.noInteract {
+		pointer-events: none;
+	}
+
+	.bd {
+		border: red solid 2px;
+	}
+	.line {
+		stroke: skyblue;
+		stroke-width: 1.5px;
+		fill: none;
+	}
+	.flex {
+		display: flex;
+		display: flex;
+		flex-flow: row;
+		flex-wrap: wrap;
+	}
+	.flex-1 {
+		flex: 0 0 100%;
+	}
+	.flexCenter {
+		align-items: center;
+		justify-content: center;
+	}
+	.flex-1-3 {
+		flex: 0 0 33%;
+		margin-top: 20px;
+	}
+	.info {
+		display: block;
+		height: 700px;
+		width: 800px;
+		background-color: rgba(255, 255, 255, 1);
+		display: inline-block;
+		padding: 20px;
+		border-radius: 10px;
+		box-shadow: 3px 3px 3px #000000;
+	}
+	.background {
+		height: 100%;
+		width: 100%;
+		background-color: rgba(0, 0, 0, 0.8);
+		position: fixed;
+	}
+	.axis path,
+	.axis line {
+		fill: none;
+		stroke: black;
+		shape-rendering: crispEdges;
+	}
+	circle {
+		cursor: pointer;
+	}
+	h3{
+		margin-top:25px;
+		margin-bottom:0px;
+		margin-left: 35px;
+	}
+	h5{
+		margin-bottom:0px;
+		margin-top:0px;
+		margin-left: 35px;
+	}
+	.center {
+		margin: 0 auto;
+		width: 50%;
+		/*display: block;*/
+		/*width: 1400px;*/
+	}
+
+	.center-wide {
+		margin: 0 auto;
+		width: 1400px;
+	}
+	.graph{
+		border: red solid 2px;
+	}
+
+	.bd {
+		border: red solid 4px;
+	}

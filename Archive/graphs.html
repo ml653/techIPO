@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <style>
+    	body {font-family: "Raleway"; font-size: 18px ; margin-left: 20px;}
+        svg {
+            border: deepskyblue 2px solid;
+            white-space:pre-wrap;
+        }
+        div {
+              white-space:pre-wrap;
+        }
+        text {
+            font-family: sans-serif;
+            pointer-events: none;
+        }
+        header{
+        	background-color: lightBlue;
+        }
+        .wrapper{
+        	margin-top: 20px;
+        }
+        .axis path,
+			.axis line {
+				fill: none;
+				stroke: black;
+				shape-rendering: crispEdges;
+			}
+        
+    </style>
+</head>
+<body>
+	<header>
+	    	<p id="header_title">Title - A punny subtitle</p>
+	    	<p id="header_authors">Jake Wright | Jeffrey Stern | Minghao Li</p>
+	</header>
+	<div id="valuationChart" class="wrapper"></div>
+	<div id="numOfIposChart" class="wrapper"></div>
+	<div id="numOfOtcOfferingsChart" class="wrapper"></div>
+
+	<script>
+		var margin = {top: 45, right:100, left: 95, bottom: 60};
+
+		//-----------------------------------------------------------------MEAN/MEDIAN VALUATION GRAPH:
+		//Setting size of the graph
+		var valWidth = screen.width/1.6,
+		    valHeight = screen.height/2.2;
+
+
+		//Creating the svg element
+		var svg = d3.select("#valuationChart").append("svg")
+		    .attr("width", valWidth)
+		    .attr("height", valHeight);
+
+
+		//Setting padding and creating the scales and axis
+		var valPadding = 75;
+
+		var xScalePerception = d3.scale.linear().domain([1995,2016]).range([valPadding, valWidth - valPadding]);
+		var yScalePerception = d3.scale.linear().domain([0, 4500]).range([valHeight - valPadding, valPadding]);
+
+		var xAxisPerception = d3.svg.axis().scale(xScalePerception).orient("bottom").tickFormat(d3.format("d"));
+		var yAxisPerception = d3.svg.axis().scale(yScalePerception).orient("left");
+
+		//Creating the objects for legend color and texts
+		var colorScale = ["#FF4848","#62D0FF"];
+		var valLegendNames = ["Mean", "Median"];
+
+		//Adding the axis to the svg
+		svg.append("g").attr("transform", "translate(0," + (valHeight - valPadding) + ")").attr("class", "axis")
+		.call(xAxisPerception);
+		svg.append("g").attr("transform", "translate(" + valPadding + ",0)").attr("class", "axis")
+		.call(yAxisPerception);
+		
+		// Lines
+		var	meanLine = d3.svg.line()
+			.x(function(d) { return xScalePerception(d.year); })
+			.y(function(d) {return yScalePerception(d.mean); });
+		var	medianLine = d3.svg.line()
+			.x(function(d) { return xScalePerception(d.year); })
+			.y(function(d) { return yScalePerception(d.median); });
+
+		//Reading from the csv
+		var valuationData;
+		d3.csv("valuation.csv", function(error, data){
+			data.forEach(function(d) {
+				//Convert string to usable number data
+				d.year =parseFloat(d.year);
+				d.mean = parseFloat(d.mean);
+				d.median = parseFloat(d.median);
+			});
+
+			valuationData = data;
+			
+			// adding the lines to the svg 
+			svg.append("path")
+				.style("stroke", "#FF4848")
+				.style("fill", "none")
+				.style("stroke-width", "3")
+				.attr("d", meanLine(valuationData));
+			svg.append("path")
+				.style("stroke", "#62D0FF")
+				.style("fill", "none")
+				.style("stroke-width", "3")
+				.attr("d", medianLine(valuationData));
+		});
+
+		//Adding the legend
+		var legend = svg.selectAll(".legend")
+      	.data(colorScale)
+    	.enter().append("g")
+	      .attr("class", "legend")
+	      .attr("transform", function(d, i) { 
+      	return "translate(" +425+ "," + (10+ i * 30) + ")"; });
+
+	  	legend.append("rect")
+		  	.attr("x", 10)
+		  	.attr("width", 25)
+		  	.attr("height", 25)
+		  	.style("fill", function(i){
+			  return i;
+			 });
+
+	  	legend.append("text")
+		  	.attr("x", 50)
+		  	.attr("y", 15)
+		  	.style("text-anchor", "left")
+		  	.text(function(d,i){
+	  			return valLegendNames[i];
+	 		 });
+
+		//-----------------------------------------------------------NUMBER OF IPOS GRAPH:
+		//Setting Size of Graph
+		var numWidth = 1000 - margin.left - margin.right;
+		var numHeight = 400 - margin.top - margin.bottom; 
+		var numPadding = 75;
+
+		//Create Scale
+		var xScaleIpos = d3.scale.ordinal().rangeRoundBands([0, numWidth], .25);
+		var yScaleIpos = d3.scale.linear().range([numHeight, 0]);
+
+		//Create Axis
+		var xAxisIpos = d3.svg.axis()
+		    .scale(xScaleIpos)
+		    .orient("bottom");
+
+		var yAxisIpos = d3.svg.axis()
+		    .scale(yScaleIpos)
+		    .orient("left")
+		    .ticks(10);
+
+		//Create svg
+		var IPOsvg = d3.select("#numOfIposChart").append("svg")
+		    .attr("width", numWidth + margin.left + margin.right)
+		    .attr("height", numHeight + margin.top + margin.bottom)
+		  .append("g")
+		    .attr("transform", 
+		          "translate(" + margin.left + "," + margin.top + ")");
+
+
+		//Read Data:
+		var numIPOdata;
+		d3.csv("num_of_ipos.csv", function(error, data) {
+		    data.forEach(function(d) {
+		        d.year = parseFloat(d.year);
+		        d.num_of_ipos = parseFloat(d.num_of_ipos);
+		    });
+			
+			numIPOdata = data;
+			xScaleIpos.domain(data.map(function(d) { return d.year; }));
+			yScaleIpos.domain([0, d3.max(data, function(d) { return d.num_of_ipos; })]);
+			  
+			//Add Axis:
+			IPOsvg.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0," + numHeight + ")")
+			      .call(xAxisIpos)
+			    .selectAll("text")
+			      .style("text-anchor", "end")
+			      .attr("dx", "-.8em")
+			      .attr("dy", "-.55em")
+			      .attr("transform", "translate(20, 7)rotate(-45)" );
+			  
+			IPOsvg.append("g")
+			      .attr("class", "y axis")
+			      .call(yAxisIpos)
+			 .append("text")
+			      .attr("transform", "rotate(-90)")
+			      .attr("y", 6)
+			      .attr("dy", ".71em")
+			      .style("text-anchor", "end")
+			      .text("# IPOs");
+			  
+			//Add Bar Chart:
+			IPOsvg.selectAll("bar")
+			      .data(data)
+			.enter().append("rect")
+			      .style("fill", "steelblue")
+			      .attr("x", function(d) { return xScaleIpos(d.year) ; })
+			      .attr("width", xScaleIpos.rangeBand())
+			      .attr("y", function(d) { return yScaleIpos(d.num_of_ipos); })
+			      .attr("height", function(d) { return numHeight - yScaleIpos(d.num_of_ipos); });
+		});
+
+		//-----------------------------------------------------------NUMBER OF OTC GRAPH:
+		//Setting Size of Graph
+		var OTCWidth = 1000 - margin.left - margin.right;
+		var OTCHeight = 400 - margin.top - margin.bottom; 
+		var OTCPadding = 75;
+
+		//Create Scale
+		var xScaleOTC = d3.scale.ordinal().rangeRoundBands([0, OTCWidth], .25);
+		var yScaleOTC = d3.scale.linear().range([OTCHeight, 0]);
+
+		//Create Axis
+		var xAxisOTC = d3.svg.axis()
+		    .scale(xScaleOTC)
+		    .orient("bottom");
+
+		var yAxisOTC = d3.svg.axis()
+		    .scale(yScaleOTC)
+		    .orient("left")
+		    .ticks(10);
+
+		//Create svg
+		var OTCsvg = d3.select("#numOfIposChart").append("svg")
+		    .attr("width", OTCWidth + margin.left + margin.right)
+		    .attr("height", OTCHeight + margin.top + margin.bottom)
+		  .append("g")
+		    .attr("transform", 
+		          "translate(" + margin.left + "," + margin.top + ")");
+
+
+		//Read Data:
+		var OTCdata;
+		d3.csv("OTC_Offerings.csv", function(error, data) {
+		    data.forEach(function(d) {
+		        d.year = parseFloat(d.year);
+		        d.OTC_offerings = parseFloat(d.OTC_offerings);
+		    });
+			
+			OTCdata = data;
+			xScaleOTC.domain(data.map(function(d) { return d.year; }));
+			yScaleOTC.domain([0, d3.max(data, function(d) { return d.OTC_offerings; })]);
+			  
+			//Add Axis:
+			OTCsvg.append("g")
+			      .attr("class", "x axis")
+			      .attr("transform", "translate(0," + OTCHeight + ")")
+			      .call(xAxisOTC)
+			    .selectAll("text")
+			      .style("text-anchor", "end")
+			      .attr("dx", "-.8em")
+			      .attr("dy", "-.55em")
+			      .attr("transform", "translate(20, 7)rotate(-45)" );
+			  
+			OTCsvg.append("g")
+			      .attr("class", "y axis")
+			      .call(yAxisOTC)
+			 .append("text")
+			      .attr("transform", "rotate(-90)")
+			      .attr("y", 6)
+			      .attr("dy", ".71em")
+			      .style("text-anchor", "end")
+			      .text("Over the Counter Offerings");
+			  
+			//Add Bar Chart:
+			OTCsvg.selectAll("bar")
+			      .data(OTCdata)
+			.enter().append("rect")
+			      .style("fill", "steelblue")
+			      .attr("x", function(d) { return xScaleOTC(d.year) ; })
+			      .attr("width", xScaleOTC.rangeBand())
+			      .attr("y", function(d) { return yScaleOTC(d.OTC_offerings); })
+			      .attr("height", function(d) { return OTCHeight - yScaleOTC(d.OTC_offerings); });
+		});
+
+
+
+
+	</script>
+</body>
+</html>

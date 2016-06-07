@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <style>
+        svg {
+            border: deepskyblue 2px solid;
+        }
+    </style>
+</head>
+<body>
+<div class="svg"></div>
+<script>
+    var stockData;
+    var height = 1000;
+    var width = 1400;
+    var padding = 100;
+    var rad = 20;
+
+    //d3 creates svg
+    var svg = d3.select(".svg").append("svg").attr("width", width).attr("height", height);
+
+    d3.csv('stock_data.csv', function(error,data){
+        //Sets stock
+        stockData = data;
+        stockData.forEach(function(cell){cell.cluster = 0; cell.radius = rad});
+
+        //Generates yScale with time
+        var formatDate = d3.time.format("%m-%d-%y");
+        var yScale =
+                d3.time.scale().domain([formatDate.parse("01-01-95"), formatDate.parse("01-01-15")]).range([height-padding,
+                    padding]);
+        console.log(yScale(formatDate.parse('01-01-95')));
+        console.log(yScale(formatDate.parse('01-01-15')));
+
+//        Set force layout
+        var forceLayout = d3.layout.force()
+                .nodes(stockData)
+                .gravity(0.05)
+                .charge(-20)
+                .on("tick", tick)
+                .size([width, height])
+                .start();
+
+        //Sets data
+        var circle = svg.selectAll("circle")
+                .data(stockData)
+                .enter().append("circle");
+
+        //Sets attributes
+        circle
+                .attr("r", function(d){
+//                    var radius = d[];
+                    return rad;
+                })
+                .style('fill', 'lightblue')
+//                .style("fill", function(d) { return colorScale(d.cluster); })
+                .call(forceLayout.drag);
+
+        //Disable cluster and collide
+        function tick() {
+            circle
+                   .each(collide(0.0001, stockData))
+                    .attr("cx", function(d) { return d.x; })
+                    .attr("cy", function(d) {
+                        var yValue = yScale(formatDate.parse(d['Offer Date'].replace(/\//g, "-")));
+                        d.y = yValue;
+                        return d.y;
+                    })
+                    .style("stroke", "black");
+        }
+        var maxRadius = 12;
+        var clusterPadding = 1.0;
+
+        //Not our code.
+        // Resolves collisions between d and all other circles.
+        function collide(alpha, nodes) {
+            var quadtree = d3.geom.quadtree(nodes);
+            return function(d) {
+                var r = d.radius + maxRadius + Math.max(padding, clusterPadding),
+                        nx1 = d.x - r,
+                        nx2 = d.x + r,
+                        ny1 = d.y - r,
+                        ny2 = d.y + r;
+                quadtree.visit(function(quad, x1, y1, x2, y2) {
+                    if (quad.point && (quad.point !== d)) {
+                        var x = d.x - quad.point.x,
+                                y = d.y - quad.point.y,
+                                l = Math.sqrt(x * x + y * y),
+                                r = d.radius + quad.point.radius + (d.cluster === quad.point.cluster ? padding : clusterPadding);
+                        if (l < r) {
+                            l = (l - r) / l * alpha;
+                            d.x -= x *= l;
+                            d.y -= y *= l;
+                            quad.point.x += x;
+                            quad.point.y += y;
+                        }
+                    }
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                });
+            };
+        }
+    });
+</script>
+
+</body>
+</html>

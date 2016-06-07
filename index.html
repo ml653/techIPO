@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script src="thirdPartyCode.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+	<script src="http://d3js.org/d3.v3.min.js"></script>
+</head>
+
+<body>
+	<div class="background flex flexCenter">
+		<div class="info flex flexCenter">
+			<div class="svg1 flex flexCenter"></div>
+			<div class="textHolder flex"></div>
+		</div>
+	</div>
+
+	<div class="header">
+		<div class="center">
+			<p id="header_title">Bubbles are Beautiful - An Analysis and Overview of the Tech IPO Market</p>
+			<p id="header_authors">Jake Wright | Jeffrey Stern | Minghao Li</p>
+		</div>
+	</div>
+
+	<div class="center">
+		<p class="description_text">In the past 20 years, there have been over 4000 Technology companies that have gone public internationally. Regarded as a relatively volatile and exciting class of stocks, technology companies have in many ways captured an enormous amount of the growth in our economy. Through the lens of American companies, the following is an attempt to delve into the nuances of the Technology IPO market to better understand and conceptualize how different individual companies compare relative to one another over time and the larger encompassing trends of the market.</p>
+	</div>
+
+		
+	<div class="center-wide">
+		<h2>Spotlight: American Tech IPO Valuations ($mm)</h2>
+		<div id="filter" class="wrapper"><p class="filterTitle">Filter By:</p></div>
+		<div id="colorFilter" class="wrapper"><p class="filterTitle">Color By:</p></div>
+		<div id="svg" class="wrapper"></div>
+	</div>
+
+	<div class="center">
+		<h2>Some Takeaways...</h2>
+		<h3>Market Capitalizations at IPO</h3>
+		<h5>(in $mm)</h5>
+		<div id="valuationChart" class="wrapper"></div>
+		<p class="description_text">The interesting thing here, is that generally overtime IPO valuations are trending upwards which is arguably representative of the “unicorn” private market which has gained significant media attention recently. Where historically companies would go public much earlier in their respective life stages, more recently, technology companies are really extracting as much capital as they can from the private markets prior to IPOing leading to higher market capitalizations when they do go public.<br><br>Additionally, a lot of the spikes year to year for the average valuations can be accounted for by outliers. For example, the 2008 spike is certainly due to Visa’s IPO which was the largest IPO in United States history at the time.</p>
+	</div>
+
+	<div class="center">
+		<h3>Number of IPOs</h3>
+		<div id="numOfIposChart" class="wrapper"></div>
+		<p class="description_text">The obvious take aways are reflective of the notorious “Tech Bubble” at the turn of the century. An enormous amount of companies, caught up in the hype and promise of the internet and public markets, tested the public markets which in retrospect lead to one of the largest public market disasters in recent memory. It’s interesting to note there actually still have not been any tech IPOs in 2016 (arguable 1 if you count Dell’s SecureWorks’ spinoff), possibly suggestive of a slowdown. </p>
+	</div>
+
+	<div class="center">
+		<h3>Number of OTC Offerings</h3><br>
+		<div id="numOfOtcOfferingsChart" class="wrapper"></div>
+		<p class="description_text">This graph gets into a very specific aspect of IPOs - what exchange a company trades in. The household market exchanges in the US are the New York Stock Exchange (NYSE), the S&P 500, and the NASDAQ which each encompass a specific type of company - the NASDAQ is most frequently associated with technology companies. The OTC market though is an “over the counter” exchange qualified in contrast to the aforementioned formal exchanges. Typically a company will trade on the OTC exchange when it is still too small from a valuation standpoint to meet the formal exchanges’ listing requirements. What is interesting here is the number of OTC offerings during the Tech Bubble relative to any other time. Hindsight is 20-20 but such a spike in OTC companies, which are typically not the most financially sound and which are mainly penny stocks, could have sounded the alarm to investors that something odd was occurring.</p>
+		<br>
+		<p class="description_text">There are just some of the things that stood out to us and certainly aren't all (or even any) of the important ones - we encourage you to explore these IPOs and come away with your own.</p>
+		<br><br>
+	</div>
+
+
+	<script>
+		//************************************ HELPER FUNCTIONS *****************************
+		//function to check if company was profitable since ipo
+		var greenOrRed = function(d) {
+			if(parseInt(d["Return"].slice(0,d["Return"].indexOf("%"))) > 0) {
+				return "green";
+			}
+			else if(parseInt(d["Return"].slice(0,d["Return"].indexOf("%"))) < 0) {
+				return "red";
+			}
+			else{
+				return "blue";
+			}
+		};
+
+		//parse the data fields to remove " and " with "/"
+		var deleteAnd = function(d) {
+			if(d.indexOf(",") >= 0){
+				d.replace(", ", "/");
+				return d.replace(" and ", "/").replace(", ", "/");
+			}
+			else if(d.indexOf(" and ") >= 0){
+				return d.replace(" and ", "/");
+			}
+			else{
+				return d;
+			}
+		}
+
+		//tokenize a business description, split its description into multiple lines so that it will fit in circle
+		//returns an array with business description split up into different sections based off:
+		//maximum length <= charLimit
+		var tokenize_description = function(d){
+			var list = [];
+			var description = d;
+			while (description.length > charLimit){
+				//last space before character
+				var tempWrap = charLimit - description.slice(0, charLimit).split('').reverse().join('').indexOf(" ");
+				//add the token from the first char up to the last space before charLimit to the list
+				list.push(description.slice(0, tempWrap));
+				//update the description to not include the previous token
+				description = description.slice(tempWrap);
+			}
+			list.push(description);
+			return list;
+		}
+
+		//this displays all the data on the mouse hover event actions, the name, the total return, the business description etc
+		var display_data = function (d, selectedNode) {
+			//append name
+			//if too long too fit on one line
+			if(d.Name.length > maxNameLength){
+				var tempWrap = d.Name.length/2 + d.Name.slice(d.Name.length/2).indexOf(" ");
+				//corner case
+				if(tempWrap > 23){
+					tempWrap = d.Name.slice(0, tempWrap).indexOf(" ");
+				}
+				selectedNode.append("text")
+						.attr("class", "uniqueText")
+						.attr("text-anchor", "middle")
+						.attr("font-size", 28)
+						.attr("x", d.x)
+						.attr("y", d.y)
+						.attr("dy", "-2.6em")
+						.attr("font-weight", "bold")
+						.text(d.Name.slice(0, tempWrap));
+				selectedNode.append("text")
+						.attr("class", "uniqueText")
+						.attr("text-anchor", "middle")
+						.attr("font-size", 28)
+						.attr("x", d.x)
+						.attr("y", d.y)
+						.attr("dy", "-1.6em")
+						.attr("font-weight", "bold")
+						.text(d.Name.slice(tempWrap));
+			}
+			else{
+				selectedNode.append("text")
+						.attr("class", "uniqueText")
+						.attr("text-anchor", "middle")
+						.attr("font-size", 28)
+						.attr("x", d.x)
+						.attr("y", d.y)
+						.attr("dy", "-1.6em")
+						.attr("font-weight", "bold")
+						.text(d.Name);
+			}
+			//append profits/losses
+			selectedNode.append("text")
+					.attr("class", "uniqueText")
+					.attr("text-anchor", "middle")
+					.attr("font-size", 26)
+					.attr("x", d.x)
+					.attr("y", d.y)
+					.attr("dy", "-.6em")
+					.text("Total Return: " + d["Return"])
+					.style("fill", greenOrRed(d))
+					.attr("font-weight", "bold")
+					.attr("stroke", "black")
+					.attr("stroke-width", "1px");
+			//append industry
+			selectedNode.append("text")
+					.attr("class", "uniqueText")
+					.attr("text-anchor", "middle")
+					.attr("font-size", 16)
+					.attr("x", d.x)
+					.attr("y", d.y)
+					.attr("dy", ".3em")
+					.attr("font-weight", "bold")
+					.text(deleteAnd(d["Industry"]));
+
+			//append Business Description
+			var bDescription = tokenize_description(d["Business Description"]);
+			for (var i = 0; i <= bDescription.length; i++) {
+				selectedNode.append("text")
+						.attr("class", "uniqueText")
+						.attr("text-anchor", "middle")
+						.attr("font-size", 14)
+						.attr("x", d.x)
+						.attr("y", d.y)
+						.attr("dy", function(){ return (i+1) + 1.5 + "em"})
+						.text(bDescription[i]);
+			};
+
+//            append industry
+			selectedNode.append("text")
+                    .attr("class", "uniqueText")
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", 16)
+                    .attr("x", d.x)
+                    .attr("y", d.y)
+                    .attr("dy", "7.5em")
+                    .attr("font-weight", "bold")
+                    .attr("fill", "blue")
+                    .attr("text-decoration", "underline")
+                    .text("More Information");
+		}
+
+		//Primary print function to edit information; pass in stockData object
+		function print(obj){
+			$('.background').toggle(true);
+			var dateArray = [];
+			for(var x in obj){
+				if(!isNaN(Date.parse(x))){
+					dateArray.push({date: new Date(Date.parse(x)), value: obj[x]});
+				}
+			}
+			var sortedArray = mergeSort(dateArray);
+			printGraph(sortedArray);
+			var IPODate = obj['Offer Date'];
+			var name = obj.Name;
+			var offerMarketValue = obj['Offer Market Value'];
+			var returnValue = obj.Return;
+			var currentPrice = obj['04/12/2016'];
+			var sector = obj.Sector;
+			var country = obj.Country;
+			var companyWebsite = obj['Company Website'];
+			var cagr = obj.CAGR;
+			var offerPrice = obj['Offer Price'];
+
+			$('.svg1').prepend('<div class="flex flex-1 flexCenter"><h1>'+name+'</h1></div></div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Offer Date: </u>'+IPODate+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Offer Market Value (mm): </u>'+offerMarketValue+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Current Price (04/12/16): </u>$'+currentPrice+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Return: </u>'+returnValue+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>CAGR: </u>'+cagr+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Offer Price: </u> '+offerPrice+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Country: </u>'+country+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Sector: </u>'+sector+'</div>');
+			$('.svg1').append('<div class="flex flex-1-3"><u>Company Website: </u><br><a href='+companyWebsite+'>'+companyWebsite+'</a></div>');
+		}
+
+		//Prints the graph to the SVG; appends all axis, labels, etc.
+		function printGraph(array){
+			var height = 350;
+			var width = 800;
+			var padding = 100;
+			var dataArray = array.map(function(cell){
+				return {x: cell['date'], y:cell['value']}
+			}).filter(function(cell){
+				if(isNaN(cell.x) || isNaN(cell.y) || cell.x=="" ||  cell.y==""){
+					return false;
+				} else return true;
+			}).filter(function(cell){
+				if(cell.y == 0) return false;
+				else return true;
+			}).map(function(cell){
+				return {x: Number(cell.x), y: cell.y};
+			});
+			allData = dataArray;
+			var sortedArray = mergeSort(dataArray);
+			$('.svg1').empty();
+			var svg1 = d3.select('.svg1').append("svg").attr("height", height).attr("width", width);
+			//Generate scales
+			var xMin = Math.min.apply(null, dataArray.map(function(cell){return cell.x}));
+			var xMax = Math.max.apply(null, dataArray.map(function(cell){return cell.x}));
+			var yMin = Math.min.apply(null, dataArray.map(function(cell){return cell.y}));
+			var yMax = Math.max.apply(null, dataArray.map(function(cell){return cell.y}));
+			var xScale = d3.time.scale().domain([xMin, xMax]).range([padding, width-padding]);
+			var yScale = d3.scale.linear().domain([yMin, yMax]).range([height-padding, padding]);
+			//Append scales
+			var xAxes = d3.svg.axis()
+					.scale(xScale)
+					.ticks(5)
+					.orient("bottom");
+			var yAxes = d3.svg.axis()
+					.scale(yScale)
+					.ticks(5)
+	                .tickFormat(function(d){return '$'+d})
+					.orient("left");
+			svg1.append("g")
+					.attr('class', 'axis')
+					.attr("transform", "translate("+(0)+", "+(height-padding)+")")
+					.call(xAxes);
+			svg1.append("g")
+					.attr('class', 'axis')
+					.attr("transform", "translate("+(padding-15)+", "+(0)+")")
+					.call(yAxes);
+			var path = d3.svg.line()
+					.x(function (d) { return xScale(d.x); })
+					.y(function (d) { return yScale(d.y); });
+			svg1.append("path").attr("d", path(sortedArray)).attr("class", "line");
+		}
+	</script>
+
+	<script>
+		//*******************************ADD THE VISUALIZATION ***************************
+		var stockData;
+		var svg;
+		var width = 1400;
+		var height = 2500;
+		var padding = 150;
+		var nodePadding = -10;
+		var charLimit = 55; //used to decide how long a lines of text is for the business descriptions before wrapping
+		var maxNameLength = 25;
+		//for filter
+		var industries =[];
+		var colorOptions=["Industry","Return"];
+		
+		//Read the Data:
+		d3.csv('stock_data.csv', function(error,data){
+			stockData = data.slice(0, 381).filter(function(d){
+				if(d["Country"] == "United States"){
+					return true;
+				}
+				return false;
+			})
+			//filter element
+			industries.push("All");
+			
+			//Generates yScale with time
+			//create a y-axis
+			var formatDate = d3.time.format("%m-%d-%y");
+			
+			//time scale
+			var yScale =
+					d3.time.scale().domain([formatDate.parse("10-01-95"), formatDate.parse("01-01-15")]).range([height,
+						padding]);
+			var yAxisTime = d3.svg.axis().scale(yScale).orient("left");
+			
+			//Generates radius scales
+			var radArray = stockData.map(function(d){
+				var marketValueString = d['Offer Market Value'];
+				return marketValueNum
+						= parseFloat(marketValueString.substring(1, marketValueString.length).replace(/,/g, ''));
+			});
+			
+			//find min and max radius so you can create the domain of the radii with radscale
+			var radMin = Math.min.apply(null, radArray);
+			var radMax = Math.max.apply(null, radArray);
+			var radScale = d3.scale.linear().domain([radMin,radMax]).range([30,200]);
+
+			//Color Scale, input 0-9 and return hex color
+			var colorScale = d3.scale.ordinal()
+					.domain([1,2,3,4,5,6,7,8,9])
+					.range(["#F49AC2", 	"#03C03C", "#779ECB", "#FFDF00", "#CFCFC4", "#FF6961", "#FFB347", "#CB99C9", "#1FCECB"]); //magenta, green, blue, yellow, orange, red, violet, grey,
+			stockData.forEach(function(d, i){
+				//d every data point
+				var marketValueString = d['Offer Market Value'];
+				var marketValueNum = parseFloat(marketValueString.substring(1, marketValueString.length).replace(/,/g, ''));
+				var rad = radScale(marketValueNum);
+
+				//plot radius color and y-scale
+				d.radius = rad;
+
+
+				d.date = yScale(formatDate.parse(d['Offer Date'].replace(/\//g, "-")));
+				//filter
+				if (industries.indexOf(d.Industry) == -1){ //don't add duplicate filters
+					industries.push(d.Industry);
+				}
+				//mod 5 for 5 different colors
+				//group is fed into color in the future
+				d.group=industries.indexOf(d.Industry);
+			});
+
+			//Creates force layout
+			//keep this the SAME
+			var force = d3.layout.force()
+					.nodes(stockData)
+					.size([width, height])
+					.gravity(0.01)
+					.on("tick", onTick)
+					.start();
+
+			//d3 creates svg
+			svg = d3.select("#svg").append("svg").attr("id", "svg").attr("width", width).attr("height", height);
+			
+			//Add Axis:
+			svg.append("g")
+					.attr("class","axis")
+					.attr("transform", "translate("+ (padding-55) +",0)")
+					.style("stroke-dasharray", ("3, 3"))
+					.call(yAxisTime);
+			
+			//----------------------------------------------------------------------------------------------
+			//FILTERS
+			//industry filter
+			//Variable storing all the filters and their labels (by industry)
+			var industryFilterForm = d3.select("#filter").append("form");
+			labels = industryFilterForm.selectAll("label")
+					.data(industries)
+					.enter()
+					.append("label").attr("id", function (d){return d.replace(/ /g,'').replace (/,/g, "") + "ID";})
+					.text(function(d) {return d;})
+					.insert("input")
+					.attr("id", "filterType")
+					.attr("checked", true)
+					.attr("id", function(d){return d;})
+					.attr({
+						type: "checkbox",
+						class: "checkbox",
+						name: "industryFilter",
+						value: function(d) {return d;}
+					});
+
+			//Onclick functionality for the filter
+			industryFilterForm.on("click", function(d){
+				var buttons = [];
+				d3.selectAll(".checkbox").forEach(function(d){
+					buttons.push(d);
+				});
+				//All not checked; should not be able to hover
+				for (var i = 1; i < buttons[0].length; i++) {
+					//if the button is not selected, filter out that cetegory for now
+					if(buttons[0][i].checked != true){
+						//first hide the bad text
+						d3.selectAll("text").attr("visibility",
+								function (d){ if(d.Industry == buttons[0][i].value){ return "hidden";} else{ return d3.select(this).attr("visibility")}});
+						//then decrease circle radius
+						d3.selectAll("circle").attr("r",
+								function (d){ if(d.Industry == buttons[0][i].value) {return 10;} else{ return d3.select(this).attr("r");
+								}});
+						d3.selectAll('.node').classed('noInteract', function(d){
+							if(d.Industry == buttons[0][i].value) {
+								return true;
+							} else return d3.select(this).classed('noInteract');
+						});
+					}
+					//if the button is selected, restore everything
+					else if(buttons[0][i].checked == true){
+						d3.selectAll("text").attr("visibility",
+								function (d){ if(d.Industry == buttons[0][i].value){ return "visible";} else{ return d3.select(this).attr("visibility")}});
+						d3.selectAll("circle").attr("r",
+								function (d){ if(d.Industry == buttons[0][i].value) {return d.radius;} else{ return d3.select(this).attr("r");
+								}});
+						d3.selectAll('.node').classed('noInteract', function(d){
+							if(d.Industry == buttons[0][i].value) {
+								return false;
+							} else return d3.select(this).classed('noInteract');
+						});
+					}
+				}
+			});
+
+			//Industry filter functionality
+			//jQuery code that synchronizes the clicking of the different check boxes and the value of the all box (and vice versa)
+			$('#All').click(function() {
+				if(this.checked) {
+					$('.checkbox').prop('checked', true);
+				} else {
+					$('.checkbox').prop('checked', false);
+				}
+			});
+			$('.checkbox').click(function() {
+				if(!this.checked) {
+					$('#All').prop('checked', false);
+				}
+			});
+
+			//Color Filter
+			var colorFilterForm = d3.select("#colorFilter").append("form");
+			labels = colorFilterForm.selectAll("label")
+					.data(colorOptions)
+					.enter()
+					.append("label")
+					.text(function(d) {return d;})
+					.insert("input")
+					.attr({
+						type: "radio",
+						class: "shape",
+						name: "mode",
+						value: function(d) {return d;}
+					})
+
+			//Onclick functionality for the color filter
+			colorFilterForm.on("click", function(d){
+				var buttons = [];
+				d3.selectAll(".shape").forEach(function(d){
+					buttons.push(d);
+				});
+				//if "Industry" is checked
+				if(buttons[0][0].checked == true){
+					d3.selectAll("circle").style("fill", function(d){return colorScale(d.group)});
+				}
+				else if(buttons[0][1].checked == true){
+					d3.selectAll("circle").style("fill",
+							function (d){ if(greenOrRed(d)=="green"){ return "MediumAquaMarine ";} else{ return "#ff7566";}});
+				}
+			});
+
+			//----------------------------------------------------------------------------------------------
+			//NODES
+			//Sets d3 selection and appends g for all the nodes
+			var node = svg.selectAll(".node")
+					.data(stockData)
+					.enter().append('g')
+					.attr('class', 'node');
+
+//			//Binds 1 data element to the moused over element
+			var selectedNode;
+
+			//adding all of the circles to the svg and pinning them to the nodes
+			//in here we also include the mouse-event interactions with the graph
+			node
+					.append("circle")
+					.attr("id", "normalNode")
+					.attr("r", function(d){return d.radius})
+					//for filter
+					.attr("Industry", function(d){ return d["Industry"];})
+					.attr("Name", function(d){ return d["Name"];})
+					//for color scale
+					.style("fill", function(d){return colorScale(d.group)})
+					.style("opacity", 0.85)
+					.style("stroke", "white")
+					.style('stroke-width', 1)
+					//hovering on
+					.on('mouseenter', function(d){//"#normalNode",
+						//make every other circle more translucent
+						d3.selectAll("circle").style('opacity', 0.3);
+						//circle we are on set opacity to 1
+						var mouseNode = d3.select(this);
+						mouseNode.style('opacity', 1);
+						mouseNode.transition().duration(200).delay(100).attr('r', 200);
+						mouseNode.style('stroke-width', 5);
+
+						//currently gets rid of all text
+						d3.selectAll(".normalText").attr("visibility","hidden");
+						selectedNode = svg.selectAll(".uniqueText")
+//								.data([stockData[150]])
+								.data(mouseNode.data())
+								.enter().append('g');
+						//synchronization implemented here
+						//these few lines took forever to come up with, had problems where past calls to mouseenter
+						//were setting off their display data's even though they had left
+						setTimeout(function(){if(mouseNode.style("opacity") == 1){
+							display_data(d, selectedNode);
+						}}, 200)
+					})
+					.on('mouseleave', function(d){//"#normalNode",
+						//make every other circle more translucent
+						d3.select(this).transition().duration(200).delay(0).attr('r', d.radius);
+						d3.select(this).style('stroke-width', 1);
+						d3.selectAll("circle").style('opacity', 0.95);
+						//d3.selectAll("#normalText").attr("visibility","none");
+						d3.selectAll('.node').selectAll('.normalText').attr('visibility', function(d) {
+							var parentNode = d3.select(this).node().parentNode;
+							var parentSelection = d3.select(parentNode);
+							if(parentSelection.classed('noInteract') == true) {
+								return 'hidden';
+							}
+							else{
+								return 'visible';
+							}
+						});
+						d3.selectAll("circle").on('click', function(d){
+							print(d);
+						});
+						d3.selectAll(".uniqueText").remove();
+					});
+			
+			//determine the maximum length text name for that radius circle before using ticker
+			var textLengthScale = d3.scale.linear().domain([30,200]).range([12, 35]);
+
+			//adding all of the corresponding names (as a text) to the circles to and pinning them to the nodes
+			node
+					.append("text")
+					.attr("class", "normalText")
+					.attr("Industry", function(d){ return d["Industry"];})
+					.attr("text-anchor", "middle")
+					.attr("font-size", function(d) {
+						return ((d.radius/200)*3)*7.5 +7.5; //increase text size 1-3x from smalest to largest circle
+					})
+					.text(function(d) {
+						var name = d["Name"];
+						//return name.slice(0, name.indexOf(","));
+						if(name.length > textLengthScale(d.radius)){
+							return d["Exchange:Ticker"].slice(d["Exchange:Ticker"].indexOf(":")+1);
+						}
+						else{
+							return name;
+						}
+					});
+			
+			//adding the corresponding market values to each node
+			node
+			//adds the market value labels
+					.append("text")
+					.attr("class", "normalText")
+					.attr("Industry", function(d){ return d["Industry"];})
+					.attr("text-anchor", "middle")
+					.attr("font-size", function(d) {
+						return ((d.radius/200)*3)*7.5 +7.5; //increase text size 1-3x from smalest to largest circle
+					})
+					.attr("dy", "1em")
+					.text(function(d) {
+						return d["Offer Market Value"].slice(0,d["Offer Market Value"].indexOf(".")) + " mm";
+					});
+			
+			//everytime there is a change in the position of the nodes, this function keeps running,
+			//acting as the physics that control all of the node collisions. It interacts with the force() layout
+			function onTick() {
+				//Changes circle location
+				d3.selectAll("#normalNode")
+						//select all circles and call collide function so that they dont overlap
+						.each(collide(0.5, stockData))
+						//so you can't pull it off the left and right side
+						.attr("cx", function(d) {
+							var leftBound = Math.max(d.radius+150, d.x);
+							d.x = Math.min(width-d.radius-150, leftBound);
+							return d.x;
+						})
+						//how far you can move up and down, this is the time bound so nodes can interact more freely
+						.attr("cy", function(d) {
+							var upperBoundPx = (d.date)+75;
+							var lowerBoundPx = (d.date)-75;
+							var upperBound = Math.max(lowerBoundPx, d.y);
+							d.y = Math.min(upperBoundPx, upperBound);
+							return d.y;
+						})
+						//bounds for top and bottom
+						.attr("cy", function(d) {
+							var upperBound = Math.max(d.radius, d.y);
+							d.y = Math.min(height-d.radius, upperBound);
+							return d.y;
+						});
+				//Changes text location
+				d3.selectAll(".normalText")
+						.attr("x", function(d) { return d.x; })
+						.attr("y", function(d) {
+							return d.y; });
+
+//				//Changes text location
+				if(d3.selectAll(".uniqueText").length != 0){
+					d3.selectAll(".uniqueText")
+						.attr("x", function(d) { return d.x; })
+						.attr("y", function(d) {
+							return d.y; });
+				}
+
+
+			}
+		});
+	</script>
+
+	<script>
+			//****************************** TAKEAWAY GRAPHS *****************************
+			var margin = {top: 45, right:100, left: 95, bottom: 60};
+
+			//-----------------------------------------------------------------MEAN/MEDIAN VALUATION GRAPH:
+			//Setting size of the graph
+			var valWidth = 1100 - margin.left - margin.right;
+			    valHeight = 500 - margin.top - margin.bottom; 
+
+
+			//Creating the svg element
+			var svg = d3.select("#valuationChart").append("svg")
+			    .attr("width", valWidth)
+			    .attr("height", valHeight);
+
+
+			//Setting padding and creating the scales and axis
+			var valPadding = 60;
+
+			var xScalePerception = d3.scale.linear().domain([1995,2016]).range([valPadding, valWidth - valPadding]);
+			var yScalePerception = d3.scale.linear().domain([0, 4500]).range([valHeight - valPadding, valPadding]);
+
+			var xAxisPerception = d3.svg.axis().scale(xScalePerception).orient("bottom").tickFormat(d3.format("d"));
+			var yAxisPerception = d3.svg.axis().scale(yScalePerception).orient("left");
+
+			//Creating the objects for legend color and texts
+			var colorScale = ["#FF4848","#62D0FF"];
+			var valLegendNames = ["Mean", "Median"];
+
+			//Adding the axis to the svg
+			svg.append("g").attr("transform", "translate(0," + (valHeight - valPadding) + ")").attr("class", "axis")
+			.call(xAxisPerception);
+			svg.append("g").attr("transform", "translate(" + valPadding + ",0)").attr("class", "axis")
+			.call(yAxisPerception);
+			
+			// Lines
+			var	meanLine = d3.svg.line()
+				.x(function(d) { return xScalePerception(d.year); })
+				.y(function(d) {return yScalePerception(d.mean); });
+			var	medianLine = d3.svg.line()
+				.x(function(d) { return xScalePerception(d.year); })
+				.y(function(d) { return yScalePerception(d.median); });
+
+			//Reading from the csv
+			var valuationData;
+			d3.csv("valuation.csv", function(error, data){
+				data.forEach(function(d) {
+					//Convert string to usable number data
+					d.year =parseFloat(d.year);
+					d.mean = parseFloat(d.mean);
+					d.median = parseFloat(d.median);
+				});
+
+				valuationData = data;
+				
+				// adding the lines to the svg 
+				svg.append("path")
+					.style("stroke", "#FF4848")
+					.style("fill", "none")
+					.style("stroke-width", "3")
+					.attr("d", meanLine(valuationData));
+				svg.append("path")
+					.style("stroke", "#62D0FF")
+					.style("fill", "none")
+					.style("stroke-width", "3")
+					.attr("d", medianLine(valuationData));
+			});
+
+			//Adding the legend
+			var legend = svg.selectAll(".legend")
+	      	.data(colorScale)
+	    	.enter().append("g")
+		      .attr("class", "legend")
+		      .attr("transform", function(d, i) { 
+	      	return "translate(" +100+ "," + (70+ i * 30) + ")"; });
+
+		  	legend.append("rect")
+			  	.attr("x", 10)
+			  	.attr("width", 15)
+			  	.attr("height", 15)
+			  	.style("fill", function(i){
+				  return i;
+				 });
+
+		  	legend.append("text")
+			  	.attr("x", 35)
+			  	.attr("y", 12)
+			  	.style("font-size", "15")
+			  	.style("text-anchor", "left")
+			  	.text(function(d,i){
+		  			return valLegendNames[i];
+		 		 });
+
+			 //-----------------------------------------------------------NUMBER OF IPOS GRAPH:
+			//Setting Size of Graph
+			var numWidth = 1000 - margin.left - margin.right;
+			var numHeight = 400 - margin.top - margin.bottom; 
+			var numPadding = 75;
+
+			//Create Scale
+			var xScaleIpos = d3.scale.ordinal().rangeRoundBands([0, numWidth], .25);
+			var yScaleIpos = d3.scale.linear().range([numHeight, 0]);
+
+			//Create Axis
+			var xAxisIpos = d3.svg.axis()
+			    .scale(xScaleIpos)
+			    .orient("bottom");
+
+			var yAxisIpos = d3.svg.axis()
+			    .scale(yScaleIpos)
+			    .orient("left")
+			    .ticks(5);
+
+			//Create svg
+			var IPOsvg = d3.select("#numOfIposChart").append("svg")
+			    .attr("width", numWidth + margin.left + margin.right)
+			    .attr("height", numHeight + margin.top + margin.bottom)
+			  .append("g")
+			    .attr("transform", 
+			          "translate(" + margin.left + "," + margin.top + ")");
+
+			//Read Data:
+			var numIPOdata;
+			d3.csv("num_of_ipos.csv", function(error, data) {
+			    data.forEach(function(d) {
+			        d.year = parseFloat(d.year);
+			        d.num_of_ipos = parseFloat(d.num_of_ipos);
+			    });
+				
+				numIPOdata = data;
+				xScaleIpos.domain(numIPOdata.map(function(d) { return d.year; }));
+				yScaleIpos.domain([0, d3.max(numIPOdata, function(d) { return d.num_of_ipos; })]);
+				  
+				//Add Axis:
+				IPOsvg.append("g")
+				      .attr("class", "axis")
+				      .attr("transform", "translate(0," + numHeight + ")")
+				      .call(xAxisIpos)
+				    .selectAll("text")
+				      .style("text-anchor", "end")
+				      .attr("dx", "-.8em")
+				      .attr("dy", "-.55em")
+				      .attr("transform", "translate(20, 7)rotate(-45)" );
+				  
+				IPOsvg.append("g")
+				      .attr("class", "axis")
+				      .call(yAxisIpos);
+				  
+				//Add Bar Chart:
+				IPOsvg.selectAll("bar")
+				      .data(numIPOdata)
+				.enter().append("rect")
+				      .style("fill", "skyblue")
+				      .attr("x", function(d) { return xScaleIpos(d.year) ; })
+				      .attr("width", xScaleIpos.rangeBand())
+				      .attr("y", function(d) { return yScaleIpos(d.num_of_ipos); })
+				      .attr("height", function(d) { return numHeight - yScaleIpos(d.num_of_ipos); });
+			});
+
+
+			//-----------------------------------------------------------NUMBER OF OTC GRAPH:
+			//Setting Size of Graph
+			var OTCWidth = 1000 - margin.left - margin.right;
+			var OTCHeight = 400 - margin.top - margin.bottom; 
+			var OTCPadding = 75;
+
+			//Create Scale
+			var xScaleOTC = d3.scale.ordinal().rangeRoundBands([0, OTCWidth], .25);
+			var yScaleOTC = d3.scale.linear().range([OTCHeight, 0]);
+
+			//Create Axis
+			var xAxisOTC = d3.svg.axis()
+			    .scale(xScaleOTC)
+			    .orient("bottom");
+
+			var yAxisOTC = d3.svg.axis()
+			    .scale(yScaleOTC)
+			    .orient("left")
+			    .ticks(10);
+
+			//Create svg
+			var OTCsvg = d3.select("#numOfOtcOfferingsChart").append("svg")
+			    .attr("width", OTCWidth + margin.left + margin.right)
+			    .attr("height", OTCHeight + margin.top + margin.bottom)
+			  .append("g")
+			    .attr("transform", 
+			          "translate(" + margin.left + "," + margin.top + ")");
+
+
+			//Read Data:
+			var OTCdata;
+			d3.csv("OTC_Offerings.csv", function(error, data) {
+			    data.forEach(function(d) {
+			        d.year = parseFloat(d.year);
+			        d.OTC_offerings = parseFloat(d.OTC_offerings);
+			    });
+				
+				OTCdata = data;
+				xScaleOTC.domain(data.map(function(d) { return d.year; }));
+				yScaleOTC.domain([0, d3.max(data, function(d) { return d.OTC_offerings; })]);
+				  
+				//Add Axis:
+				OTCsvg.append("g")
+				      .attr("class", "x axis")
+				      .attr("transform", "translate(0," + OTCHeight + ")")
+				      .call(xAxisOTC)
+				    .selectAll("text")
+				      .style("text-anchor", "end")
+				      .attr("dx", "-.8em")
+				      .attr("dy", "-.55em")
+				      .attr("transform", "translate(20, 7)rotate(-45)" );
+				  
+				OTCsvg.append("g")
+				      .attr("class", "y axis")
+				      .call(yAxisOTC);
+				  
+				//Add Bar Chart:
+				OTCsvg.selectAll("bar")
+				      .data(OTCdata)
+				.enter().append("rect")
+				      .style("fill", "skyblue")
+				      .attr("x", function(d) { return xScaleOTC(d.year) ; })
+				      .attr("width", xScaleOTC.rangeBand())
+				      .attr("y", function(d) { return yScaleOTC(d.OTC_offerings); })
+				      .attr("height", function(d) { return OTCHeight - yScaleOTC(d.OTC_offerings); });
+			});
+	</script>
+
+	<script>
+		$(document).ready(function(){
+			$('.background').toggle(false);
+			$('.background').on('click', function(){$(this).toggle(false)});
+		})
+	</script>
+
+</body>
+</html>
