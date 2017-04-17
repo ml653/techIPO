@@ -1,6 +1,6 @@
 ## Bubbles are Beautiful
 
-Bubbles are Beautiful looks to capture the the growth of American tech companies over the past two decades.  From the dot com bubble of the mid 1990s to the meteoric of the likes of Facebook, the American and global economy as well as the lives of billions of people have forever been changed by these companies.
+Bubbles are Beautiful looks to capture the the growth of American tech companies over the past two decades.  From the dot com bubble of the mid 1990s to the meteoric rise of the likes of Facebook, the American and global economy as well as the lives of billions of people have forever been changed by these companies.
 
 ### Excerpt
 
